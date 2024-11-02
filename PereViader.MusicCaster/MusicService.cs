@@ -1,24 +1,22 @@
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sharpcaster;
 using Sharpcaster.Interfaces;
 using Sharpcaster.Models.Media;
 
+namespace PereViader.MusicCaster;
+
 public class MusicService : BackgroundService
 {
     private readonly Configuration _configuration;
     private readonly ILogger<MusicService> _logger;
+    private readonly UrlService _urlService;
     
-    public MusicService(IOptions<Configuration> configuration, ILogger<MusicService> logger)
+    public MusicService(IOptions<Configuration> configuration, ILogger<MusicService> logger, UrlService urlService)
     {
         _configuration = configuration.Value;
         _logger = logger;
+        _urlService = urlService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -52,17 +50,30 @@ public class MusicService : BackgroundService
         var file = files[index];
         
         IChromecastLocator locator = new MdnsChromecastLocator();
-        var source = new CancellationTokenSource(TimeSpan.FromMilliseconds(1500));
-        var chromecasts = await locator.FindReceiversAsync(source.Token);
+        using var source = new CancellationTokenSource(TimeSpan.FromMilliseconds(3000));
+        var chromecasts = (await locator.FindReceiversAsync(source.Token))?.ToArray();
+        if (chromecasts is null)
+        {
+            throw new FileNotFoundException("No chromecasts found");
+        }
         
-        var chromecast = chromecasts.First(x => x.Name.Equals("Grupo primer piso"));
+        foreach (var i in chromecasts)
+        {
+            Console.WriteLine(i.Name);
+        }
+        var chromecast = chromecasts.FirstOrDefault(x => x.Name.Equals(_configuration.GroupName));
+        if (chromecast is null)
+        {
+            throw new FileNotFoundException($"Chromecast with name: {_configuration.GroupName} not found");
+        }
+        
         var client = new ChromecastClient();
         await client.ConnectChromecast(chromecast);
         _ = await client.LaunchApplicationAsync("0B2D9915");
 
         var media = new Media
         {
-            ContentUrl = $"http://{Environment.GetEnvironmentVariable("ASPNETCORE_URLS")!.Split(";").First()}/media/{Uri.EscapeDataString(Path.GetRelativePath(_configuration.AssetsPath, file))}"
+            ContentUrl = $"{_urlService.Url}/media/{Uri.EscapeDataString(Path.GetRelativePath(_configuration.AssetsPath, file))}"
         };
         _logger.LogInformation($"Playing: {media.ContentUrl}");
         _ = await client.MediaChannel.LoadAsync(media);

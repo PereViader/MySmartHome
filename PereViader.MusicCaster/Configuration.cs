@@ -7,4 +7,5 @@ public class Configuration
     public required TimeOnly EndTime { get; init; }
     public required TimeSpan MinimumTimeBetweenPlaybacks { get; init; }
     public required TimeSpan MaximumTimeBetweenPlaybacks { get; init; }
+    public required string GroupName { get; init; }
 }
