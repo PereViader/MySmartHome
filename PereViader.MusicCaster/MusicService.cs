@@ -10,26 +10,27 @@ public class MusicService : BackgroundService
 {
     private readonly Configuration _configuration;
     private readonly ILogger<MusicService> _logger;
-    private readonly UrlService _urlService;
     
-    public MusicService(IOptions<Configuration> configuration, ILogger<MusicService> logger, UrlService urlService)
+    public MusicService(IOptions<Configuration> configuration, ILogger<MusicService> logger)
     {
         _configuration = configuration.Value;
         _logger = logger;
-        _urlService = urlService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (true)
         {
-            try
+            if (IsInAllowedTime())
             {
-                await PlaySong();
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error while playing song");
+                try
+                {
+                    await PlaySong();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error while playing song");
+                }
             }
 
             var timeToWait = CalculateTimeToWait();
@@ -41,7 +42,7 @@ public class MusicService : BackgroundService
     private async Task PlaySong()
     {
         var random = new Random();
-        var files = Directory.GetFiles(_configuration.AssetsPath, "*.mp3", SearchOption.AllDirectories);
+        var files = Directory.GetFiles(_configuration.MusicPath, "*.mp3", SearchOption.AllDirectories);
         if (files.Length == 0)
         {
             throw new FileNotFoundException("No mp3 file found");
@@ -50,43 +51,36 @@ public class MusicService : BackgroundService
         var file = files[index];
         
         IChromecastLocator locator = new MdnsChromecastLocator();
-        using var source = new CancellationTokenSource(TimeSpan.FromMilliseconds(3000));
+        using var source = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var chromecasts = (await locator.FindReceiversAsync(source.Token))?.ToArray();
         if (chromecasts is null)
         {
-            throw new FileNotFoundException("No chromecasts found");
+            throw new InvalidOperationException("No chromecasts found");
         }
         
-        foreach (var i in chromecasts)
-        {
-            Console.WriteLine(i.Name);
-        }
-        var chromecast = chromecasts.FirstOrDefault(x => x.Name.Equals(_configuration.GroupName));
+        var chromecast = chromecasts.FirstOrDefault(x => x.Name.Equals(_configuration.CastDeviceName));
         if (chromecast is null)
         {
-            throw new FileNotFoundException($"Chromecast with name: {_configuration.GroupName} not found");
+            throw new InvalidOperationException($"Chromecast with name: {_configuration.CastDeviceName} not found");
         }
         
         var client = new ChromecastClient();
+        
         await client.ConnectChromecast(chromecast);
         _ = await client.LaunchApplicationAsync("0B2D9915");
 
         var media = new Media
         {
-            ContentUrl = $"{_urlService.Url}/media/{Uri.EscapeDataString(Path.GetRelativePath(_configuration.AssetsPath, file))}"
+            ContentUrl = $"{UrlService.GetLocalUrl()}/media/{Uri.EscapeDataString(Path.GetRelativePath(_configuration.MusicPath, file))}"
         };
         _logger.LogInformation($"Playing: {media.ContentUrl}");
         _ = await client.MediaChannel.LoadAsync(media);
     }
 
-    private string GetIp()
+    public bool IsInAllowedTime()
     {
-        string ipAddress = "";
-        if (Dns.GetHostAddresses(Dns.GetHostName()).Length > 0)
-        {
-            ipAddress = Dns.GetHostAddresses(Dns.GetHostName())[1].ToString();
-        }
-        return ipAddress;
+        var current = TimeOnly.FromTimeSpan(DateTime.Now.TimeOfDay);
+        return current >= _configuration.StartTime && current <= _configuration.EndTime;
     }
     
     public TimeSpan CalculateTimeToWait()
