@@ -58,6 +58,12 @@ public class MusicService : BackgroundService
             throw new InvalidOperationException("No chromecasts found");
         }
         
+        var anyDoingAnything = chromecasts.Any(x => !string.IsNullOrEmpty(x.Status) && x.Status != "AmbientCaster");
+        if (anyDoingAnything)
+        {
+            throw new InvalidOperationException("There is some chromecast that is doing something");
+        }
+        
         var chromecast = chromecasts.FirstOrDefault(x => x.Name.Equals(_configuration.CastDeviceName));
         if (chromecast is null)
         {
