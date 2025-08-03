@@ -1,21 +1,24 @@
-using System.Net;
 using Microsoft.Extensions.Options;
 using Sharpcaster;
 using Sharpcaster.Interfaces;
 using Sharpcaster.Models.Media;
 
-namespace PereViader.MusicCaster;
+namespace PereViader.MusicCaster.Music;
 
-public class MusicService : BackgroundService
+public class MusicServiceOptions
 {
-    private readonly Configuration _configuration;
-    private readonly ILogger<MusicService> _logger;
-    
-    public MusicService(IOptions<Configuration> configuration, ILogger<MusicService> logger)
-    {
-        _configuration = configuration.Value;
-        _logger = logger;
-    }
+    public required string MusicPath { get; init; }
+    public required string CastDeviceName { get; init; }
+    public required TimeOnly StartTime { get; init; }
+    public required TimeOnly EndTime { get; init; }
+    public required TimeSpan MinimumTimeBetweenPlaybacks { get; init; }
+    public required TimeSpan MaximumTimeBetweenPlaybacks { get; init; }
+}
+
+public class MusicService(IOptions<MusicServiceOptions> musicServiceOptions, ILogger<MusicService> logger)
+    : BackgroundService
+{
+    private readonly MusicServiceOptions _musicServiceOptions = musicServiceOptions.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -29,12 +32,12 @@ public class MusicService : BackgroundService
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Error while playing song");
+                    logger.LogError(e, "Error while playing song");
                 }
             }
 
             var timeToWait = CalculateTimeToWait();
-            _logger.LogInformation("Waiting for {0:hh\\:mm\\:ss}", timeToWait);
+            logger.LogInformation("Waiting for {0:hh\\:mm\\:ss}", timeToWait);
             await Task.Delay(timeToWait, stoppingToken);
         }
     }
@@ -42,7 +45,7 @@ public class MusicService : BackgroundService
     private async Task PlaySong()
     {
         var random = new Random();
-        var files = Directory.GetFiles(_configuration.MusicPath, "*.mp3", SearchOption.AllDirectories);
+        var files = Directory.GetFiles(_musicServiceOptions.MusicPath, "*.mp3", SearchOption.AllDirectories);
         if (files.Length == 0)
         {
             throw new FileNotFoundException("No mp3 file found");
@@ -64,10 +67,10 @@ public class MusicService : BackgroundService
             throw new InvalidOperationException("There is some chromecast that is doing something");
         }
         
-        var chromecast = chromecasts.FirstOrDefault(x => x.Name.Equals(_configuration.CastDeviceName));
+        var chromecast = chromecasts.FirstOrDefault(x => x.Name.Equals(_musicServiceOptions.CastDeviceName));
         if (chromecast is null)
         {
-            throw new InvalidOperationException($"Chromecast with name: {_configuration.CastDeviceName} not found");
+            throw new InvalidOperationException($"Chromecast with name: {_musicServiceOptions.CastDeviceName} not found");
         }
         
         var client = new ChromecastClient();
@@ -77,40 +80,40 @@ public class MusicService : BackgroundService
 
         var media = new Media
         {
-            ContentUrl = $"{UrlService.GetLocalUrl()}/media/{Uri.EscapeDataString(Path.GetRelativePath(_configuration.MusicPath, file))}"
+            ContentUrl = $"{UrlService.GetLocalUrl()}/media/{Uri.EscapeDataString(Path.GetRelativePath(_musicServiceOptions.MusicPath, file))}"
         };
-        _logger.LogInformation($"Playing: {media.ContentUrl}");
+        logger.LogInformation($"Playing: {media.ContentUrl}");
         _ = await client.MediaChannel.LoadAsync(media);
     }
 
     public bool IsInAllowedTime()
     {
         var current = TimeOnly.FromTimeSpan(DateTime.Now.TimeOfDay);
-        return current >= _configuration.StartTime && current <= _configuration.EndTime;
+        return current >= _musicServiceOptions.StartTime && current <= _musicServiceOptions.EndTime;
     }
     
     public TimeSpan CalculateTimeToWait()
     {
         var current = TimeOnly.FromTimeSpan(DateTime.Now.TimeOfDay);
 
-        var maxDelay = _configuration.MaximumTimeBetweenPlaybacks - _configuration.MinimumTimeBetweenPlaybacks;
+        var maxDelay = _musicServiceOptions.MaximumTimeBetweenPlaybacks - _musicServiceOptions.MinimumTimeBetweenPlaybacks;
         var randomWeight = new Random().NextDouble();
         var delay = maxDelay * randomWeight;
         
-        if (current < _configuration.StartTime)
+        if (current < _musicServiceOptions.StartTime)
         {
-            return _configuration.StartTime - current + delay;
+            return _musicServiceOptions.StartTime - current + delay;
         }
         
-        if (current > _configuration.EndTime)
+        if (current > _musicServiceOptions.EndTime)
         {
-            return _configuration.StartTime.ToTimeSpan().Add(TimeSpan.FromDays(1)) - current.ToTimeSpan() + delay;
+            return _musicServiceOptions.StartTime.ToTimeSpan().Add(TimeSpan.FromDays(1)) - current.ToTimeSpan() + delay;
         }
         
         var nextTime = current.ToTimeSpan() + delay;
-        if (nextTime > _configuration.EndTime.ToTimeSpan())
+        if (nextTime > _musicServiceOptions.EndTime.ToTimeSpan())
         {
-            return nextTime - _configuration.EndTime.ToTimeSpan() + _configuration.StartTime.ToTimeSpan().Add(TimeSpan.FromDays(1));
+            return nextTime - _musicServiceOptions.EndTime.ToTimeSpan() + _musicServiceOptions.StartTime.ToTimeSpan().Add(TimeSpan.FromDays(1));
         }
 
         return delay;

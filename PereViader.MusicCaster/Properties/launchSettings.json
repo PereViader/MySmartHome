@@ -5,9 +5,7 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "Music__MusicPath": "C:\\Users\\perev\\Music\\MusicCaster",
-        "Music__CastDeviceName": "Grupo primer piso"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   }
