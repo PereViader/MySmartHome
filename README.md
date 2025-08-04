@@ -1,3 +1,9 @@
+# My Smart Home
+
+## What does it do?
+
+- Emit telegram messages based on some event sent to an http endpoint
+- Play music randomly on chromcast compatible devices
 
 ## Run locally with docker 
 Note: Running the application with docker for windows does not work due to the limited compatibility in the windows host network adapter from docker. Chromecast playback has a TTL of 1 and thus packets never arrive the dockerized application
