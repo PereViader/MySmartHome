@@ -17,8 +17,8 @@ cd MySmartHome
 Create a `.env` file inside with the proper paths
 
 ```
-APP_AUDIO_PATH=/home/usuari/apps/musiccaster
-APP_CONFIG_PATH=/home/usuari/apps/musiccaster/appsettings.Configuration.json
+APP_AUDIO_PATH=/home/user/app/mysmarthome/music
+APP_CONFIG_PATH=/home/user/app/mysmarthome/appsettings.Configuration.json
 ```
 
 Start it or recreate it after an update
