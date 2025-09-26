@@ -11,12 +11,16 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0-rc.1.24452.1"/>
         <PackageReference Include="Sharpcaster" Version="1.2.3" />    
+        <PackageReference Include="Telegram.Bot" Version="22.7.3-dev.3" />    
         <PackageReference Include="TickerQ" Version="2.5.3" />    
     </ItemGroup>
 
     <ItemGroup>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
+      </Content>
+      <Content Include="..\docker-compose.yaml">
+        <Link>docker-compose.yaml</Link>
       </Content>
       <Content Include="..\Dockerfile">
         <Link>Dockerfile</Link>

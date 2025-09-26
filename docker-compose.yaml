@@ -1,0 +1,17 @@
+﻿version: '3.8'
+
+services:
+  mysmarthome:
+    
+    build: .
+
+    image: pereviader/mysmarthome:latest
+    container_name: mysmarthome
+    pull_policy: always
+    restart: unless-stopped
+    network_mode: "host"
+
+    #provide an env file with the paths "--env-file .env"
+    volumes:
+      - ${APP_AUDIO_PATH}/:/app/audio:ro
+      - ${APP_CONFIG_PATH}:/app/appsettings.Configuration.json:ro
