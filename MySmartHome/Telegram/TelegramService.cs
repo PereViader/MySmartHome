@@ -1,4 +1,4 @@
-﻿namespace PereViader.MusicCaster.Telegram;
+﻿namespace MySmartHome.Telegram;
 
 public interface ITelegramService
 {

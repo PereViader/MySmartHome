@@ -1,10 +1,10 @@
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
-using PereViader.MusicCaster.Authentication;
-using PereViader.MusicCaster.Event;
-using PereViader.MusicCaster.Music;
-using PereViader.MusicCaster.Telegram;
-using PereViader.MusicCaster.WaterReminders;
+using MySmartHome.Authentication;
+using MySmartHome.Event;
+using MySmartHome.Music;
+using MySmartHome.Telegram;
+using MySmartHome.WaterReminders;
 using TickerQ.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);

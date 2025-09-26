@@ -3,7 +3,7 @@ using Sharpcaster;
 using Sharpcaster.Interfaces;
 using Sharpcaster.Models.Media;
 
-namespace PereViader.MusicCaster.Music;
+namespace MySmartHome.Music;
 
 public class MusicServiceOptions
 {

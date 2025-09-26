@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace PereViader.MusicCaster;
+namespace MySmartHome;
 
 public static class UrlService
 {

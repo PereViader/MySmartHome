@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 
-namespace PereViader.MusicCaster.Telegram;
+namespace MySmartHome.Telegram;
 
 public class WaterTelegramServiceOptions
 {

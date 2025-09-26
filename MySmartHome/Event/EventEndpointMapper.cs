@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
-using PereViader.MusicCaster.Authentication;
-using PereViader.MusicCaster.Telegram;
+using MySmartHome.Authentication;
+using MySmartHome.Telegram;
 
-namespace PereViader.MusicCaster.Event;
+namespace MySmartHome.Event;
 
 public static class EventEndpointMapper
 {

@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
-using PereViader.MusicCaster.Telegram;
+using MySmartHome.Telegram;
 using TickerQ.Utilities.Base;
 
-namespace PereViader.MusicCaster.WaterReminders;
+namespace MySmartHome.WaterReminders;
 
 public class WaterReminderJobOptions
 {

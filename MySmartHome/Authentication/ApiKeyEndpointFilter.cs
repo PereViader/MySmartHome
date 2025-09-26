@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 
-namespace PereViader.MusicCaster.Authentication;
+namespace MySmartHome.Authentication;
 
 public class ApiKeyEndpointFilterOptions
 {
