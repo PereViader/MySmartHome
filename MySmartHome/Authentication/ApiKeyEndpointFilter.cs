@@ -9,8 +9,6 @@ public class ApiKeyEndpointFilterOptions
 
 public class ApiKeyEndpointFilter(IOptions<ApiKeyEndpointFilterOptions> configuration) : IEndpointFilter
 {
-    // Use dependency injection to get configuration
-
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         if (!context.HttpContext.Request.Query.TryGetValue("key", out var extractedApiKey))

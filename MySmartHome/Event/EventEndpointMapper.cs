@@ -31,7 +31,7 @@ public interface IEventService
     Task HandleEvent(string eventName);
 }
 
-public class EventService(IOptions<EventOptions> eventOptions, ITelegramService telegramService) : IEventService
+public class EventService(IOptions<EventOptions> eventOptions, HomeTelegramService homeTelegramService) : IEventService
 {
     public async Task HandleEvent(string eventName)
     {
@@ -40,6 +40,6 @@ public class EventService(IOptions<EventOptions> eventOptions, ITelegramService 
             throw new ArgumentException($"Event '{eventName}' is not configured.");
         }
         
-        await telegramService.SendMessageAsync(message);
+        await homeTelegramService.SendMessageAsync(message);
     }
 }

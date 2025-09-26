@@ -4,6 +4,8 @@ using PereViader.MusicCaster.Authentication;
 using PereViader.MusicCaster.Event;
 using PereViader.MusicCaster.Music;
 using PereViader.MusicCaster.Telegram;
+using PereViader.MusicCaster.WaterReminders;
+using TickerQ.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,14 +15,19 @@ builder.Configuration
 
 builder.Services
     .AddOpenApi()
+    .AddTickerQ()
     .AddHostedService<MusicService>()
     .AddSingleton<ITelegramService, TelegramService>()
+    .AddSingleton<HomeTelegramService>()
+    .AddSingleton<WaterTelegramService>()
     .AddSingleton<IEventService, EventService>()
     .AddScoped<ApiKeyEndpointFilter>()
     .Configure<EventOptions>(builder.Configuration.GetSection(nameof(EventOptions)))
     .Configure<MusicServiceOptions>(builder.Configuration.GetSection(nameof(MusicServiceOptions)))
     .Configure<ApiKeyEndpointFilterOptions>(builder.Configuration.GetSection(nameof(ApiKeyEndpointFilterOptions)))
-    .Configure<TelegramServiceOptions>(builder.Configuration.GetSection(nameof(TelegramServiceOptions)));
+    .Configure<HomeTelegramServiceOptions>(builder.Configuration.GetSection(nameof(HomeTelegramServiceOptions)))
+    .Configure<WaterTelegramServiceOptions>(builder.Configuration.GetSection(nameof(WaterTelegramServiceOptions)))
+    .Configure<WaterReminderJobOptions>(builder.Configuration.GetSection(nameof(WaterReminderJobOptions)));
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
@@ -36,6 +43,8 @@ app.UseStaticFiles(new StaticFileOptions()
     ServeUnknownFileTypes = true,
     DefaultContentType = "application/octet-stream"
 });
+
+app.UseTickerQ();
 
 app.MapEventEndpoints();
 
