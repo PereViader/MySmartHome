@@ -12,7 +12,7 @@ public class WaterReminderJobOptions
 public class WaterReminderJob(WaterTelegramService waterTelegramService, IOptions<WaterReminderJobOptions> options)
 {
     [TickerFunction("WaterReminderJob", "0 9-21 * * *")] //Every hour between 9 am and 21 pm
-    public Task Execute()
+    public Task Execute(CancellationToken cancellationToken)
     {
         var message = options.Value.Messages[Random.Shared.Next(0, options.Value.Messages.Length)];
         
