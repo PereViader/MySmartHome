@@ -15,27 +15,18 @@ Create an `music` directory within it
 Put `.mp3` music files inside the music directory
 Put an `appsettings.configuration.json` file inside the app directory ([based on this](https://github.com/PereViader/MySmartHome/blob/main/MySmartHome/appsettings.Configuration.json))
 
-
-```
-git clone https://github.com/PereViader/MySmartHome.git
-cd MySmartHome
-```
-
 Create a `.env` file inside with the proper paths
-
 ```
 APP_AUDIO_PATH=/home/user/app/mysmarthome/music
 APP_CONFIG_PATH=/home/user/app/mysmarthome/appsettings.Configuration.json
 ```
 
-Start it or recreate it after an update
 
 ```
-docker compose up -d --build --force-recreate
-```
-
-Stop it
-
-```
-docker compose down
+git clone https://github.com/PereViader/MySmartHome.git
+cd MySmartHome
+bash start.sh
+bash stop.sh
+git pull
+bash start.sh
 ```
