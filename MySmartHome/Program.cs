@@ -20,7 +20,6 @@ builder.Services
     .AddSingleton<ITelegramService, TelegramService>()
     .AddSingleton<HomeTelegramService>()
     .AddSingleton<WaterTelegramService>()
-    .AddSingleton<IEventService, EventService>()
     .AddScoped<ApiKeyEndpointFilter>()
     .Configure<EventOptions>(builder.Configuration.GetSection(nameof(EventOptions)))
     .Configure<MusicServiceOptions>(builder.Configuration.GetSection(nameof(MusicServiceOptions)))
