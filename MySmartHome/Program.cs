@@ -1,5 +1,6 @@
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using MySmartHome;
 using MySmartHome.Authentication;
 using MySmartHome.Event;
 using MySmartHome.Music;
@@ -15,7 +16,10 @@ builder.Configuration
 
 builder.Services
     .AddOpenApi()
-    .AddTickerQ()
+    .AddTickerQ(o =>
+    {
+        o.SetExceptionHandler<TickerExceptionHandler>();
+    })
     .AddHostedService<MusicService>()
     .AddSingleton<ITelegramService, TelegramService>()
     .AddSingleton<HomeTelegramService>()
@@ -29,22 +33,12 @@ builder.Services
     .Configure<WaterReminderJobOptions>(builder.Configuration.GetSection(nameof(WaterReminderJobOptions)));
 
 var app = builder.Build();
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-var variables = app.Services.GetRequiredService<IOptions<MusicServiceOptions>>();
-app.UseStaticFiles(new StaticFileOptions()
-{
-    RequestPath = "/media",
-    FileProvider = new PhysicalFileProvider(Path.GetFullPath(variables.Value.MusicPath)),
-    ServeUnknownFileTypes = true,
-    DefaultContentType = "application/octet-stream"
-});
-
 app.UseTickerQ();
-
+app.UseMusic();
 app.MapEventEndpoints();
 
 app.Run();
