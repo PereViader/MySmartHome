@@ -1,0 +1,173 @@
+@page "/games/tictactoe"
+@rendermode InteractiveServer
+
+<PageTitle>Tic-Tac-Toe</PageTitle>
+
+<div class="tictactoe-container">
+    <h1>Tic-Tac-Toe</h1>
+    
+    <div class="status-bar">
+        @if (winner != null)
+        {
+            <div class="alert alert-success">
+                @if (winner == "Draw")
+                {
+                    <span>It's a Draw!</span>
+                }
+                else
+                {
+                    <span>Winner: @winner!</span>
+                }
+                <button class="btn btn-primary ms-3" @onclick="ResetGame">Play Again</button>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                Turn: @(isPlayerTurn ? "Player (X)" : "Computer (O)")
+            </div>
+        }
+    </div>
+
+    <div class="board">
+        @for (int i = 0; i < 9; i++)
+        {
+            int localI = i;
+            <div class="cell @(board[i] != null ? "taken" : "")" @onclick="() => OnCellClick(localI)">
+                @board[i]
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .tictactoe-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 2rem;
+    }
+
+    .board {
+        display: grid;
+        grid-template-columns: repeat(3, 100px);
+        grid-template-rows: repeat(3, 100px);
+        gap: 10px;
+        background-color: #333;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .cell {
+        background-color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: bold;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s;
+    }
+
+    .cell:hover:not(.taken) {
+        background-color: #eee;
+    }
+
+    .cell.taken {
+        cursor: default;
+        color: #333;
+    }
+
+    .status-bar {
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+</style>
+
+@code {
+    private string?[] board = new string?[9];
+    private bool isPlayerTurn = true;
+    private string? winner = null;
+    private Random random = new Random();
+
+    private async Task OnCellClick(int index)
+    {
+        if (board[index] != null || winner != null || !isPlayerTurn)
+        {
+            return;
+        }
+
+        // Player Move
+        board[index] = "X";
+        if (CheckWin("X"))
+        {
+            winner = "Player";
+        }
+        else if (IsBoardFull())
+        {
+            winner = "Draw";
+        }
+        else
+        {
+            isPlayerTurn = false;
+            // Small delay for "thinking"
+            await Task.Delay(500);
+            await ComputerMove();
+        }
+    }
+
+    private async Task ComputerMove()
+    {
+        if (winner != null) return;
+
+        var availableMoves = board.Select((val, idx) => new { val, idx })
+                                  .Where(x => x.val == null)
+                                  .Select(x => x.idx)
+                                  .ToList();
+
+        if (availableMoves.Count > 0)
+        {
+            // Simple AI: Random move
+            // Improvement: Block or Win if possible could be added here
+            int move = availableMoves[random.Next(availableMoves.Count)];
+            board[move] = "O";
+
+            if (CheckWin("O"))
+            {
+                winner = "Computer";
+            }
+            else if (IsBoardFull())
+            {
+                winner = "Draw";
+            }
+        }
+        
+        isPlayerTurn = true;
+    }
+
+    private bool CheckWin(string player)
+    {
+        // Winning combinations
+        int[][] combinations = new int[][]
+        {
+            new[] {0, 1, 2}, new[] {3, 4, 5}, new[] {6, 7, 8}, // Rows
+            new[] {0, 3, 6}, new[] {1, 4, 7}, new[] {2, 5, 8}, // Cols
+            new[] {0, 4, 8}, new[] {2, 4, 6}                    // Diagonals
+        };
+
+        return combinations.Any(c => board[c[0]] == player && board[c[1]] == player && board[c[2]] == player);
+    }
+
+    private bool IsBoardFull()
+    {
+        return board.All(x => x != null);
+    }
+
+    private void ResetGame()
+    {
+        board = new string?[9];
+        isPlayerTurn = true;
+        winner = null;
+    }
+}

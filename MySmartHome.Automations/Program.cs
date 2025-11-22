@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddJsonFile("appsettings.Configuration.json", optional: false, reloadOnChange: true)
+    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
     .AddJsonFile($"appsettings.Secrets.json", optional: true, reloadOnChange: true);
 
 builder.Services
@@ -37,8 +38,16 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.MapGet("", () => new 
+{ 
+    Status = "Healthy", 
+    Service = "MySmartHome.Automations", 
+    Timestamp = DateTime.UtcNow 
+});
 app.UseTickerQ();
 app.UseMusic();
 app.MapEventEndpoints();
+
 
 app.Run();

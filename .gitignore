@@ -490,3 +490,4 @@ fabric.properties
 
 # End of https://www.toptal.com/developers/gitignore/api/csharp,dotnetcore,rider
 PereViader.MusicCaster/appsettings.Secrets.json
+appsettings.Local.json
