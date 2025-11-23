@@ -1,7 +1,8 @@
 @page "/games/tictactoe"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-@using Microsoft.AspNetCore.SignalR.Client
+@using MySmartHome.Web.Services
 @inject NavigationManager Navigation
+@inject GameService GameService
 @implements IAsyncDisposable
 
 <PageTitle>Tic-Tac-Toe</PageTitle>
@@ -9,11 +10,7 @@
 <div class="tictactoe-container">
     <h1>Tic-Tac-Toe</h1>
     
-    @if (!isConnected)
-    {
-        <div class="alert alert-warning">Connecting to server...</div>
-    }
-    else if (isWaiting)
+    @if (isWaiting)
     {
         <div class="alert alert-info">
             <div class="spinner-border spinner-border-sm me-2" role="status"></div>
@@ -118,31 +115,44 @@
 </style>
 
 @code {
-    private HubConnection? hubConnection;
+    private string playerId = Guid.NewGuid().ToString();
     private string?[] board = new string?[9];
-    private bool isConnected = false;
     private bool isWaiting = true;
     private bool opponentLeft = false;
     private string? mySymbol;
     private bool isMyTurn = false;
     private string? winner = null;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/gamehub"))
-            .Build();
+        GameService.OnWaiting += HandleWaiting;
+        GameService.OnGameStarted += HandleGameStarted;
+        GameService.OnGameUpdated += HandleGameUpdated;
+        GameService.OnOpponentLeft += HandleOpponentLeft;
 
-        hubConnection.On("WaitingForOpponent", () =>
+        JoinQueue();
+    }
+
+    private void JoinQueue()
+    {
+        GameService.JoinQueue(playerId);
+    }
+
+    private void HandleWaiting(string pId)
+    {
+        if (pId == playerId)
         {
             isWaiting = true;
             opponentLeft = false;
             winner = null;
             board = new string?[9];
             InvokeAsync(StateHasChanged);
-        });
+        }
+    }
 
-        hubConnection.On<string, bool>("GameStarted", (symbol, isTurn) =>
+    private void HandleGameStarted(string pId, string symbol, bool isTurn)
+    {
+        if (pId == playerId)
         {
             isWaiting = false;
             opponentLeft = false;
@@ -151,9 +161,12 @@
             winner = null;
             board = new string?[9];
             InvokeAsync(StateHasChanged);
-        });
+        }
+    }
 
-        hubConnection.On<string?[], bool, string?, bool>("UpdateGame", (newBoard, isTurn, winSymbol, isDraw) =>
+    private void HandleGameUpdated(string pId, string?[] newBoard, bool isTurn, string? winSymbol, bool isDraw)
+    {
+        if (pId == playerId)
         {
             board = newBoard;
             isMyTurn = isTurn;
@@ -161,45 +174,39 @@
             else if (isDraw) winner = "Draw";
             
             InvokeAsync(StateHasChanged);
-        });
+        }
+    }
 
-        hubConnection.On("OpponentLeft", () =>
+    private void HandleOpponentLeft(string pId)
+    {
+        if (pId == playerId)
         {
             if (winner == null)
             {
                 opponentLeft = true;
-                isWaiting = false; // Stop showing waiting spinner, show disconnect msg
+                isWaiting = false;
                 InvokeAsync(StateHasChanged);
             }
-        });
-
-        await hubConnection.StartAsync();
-        isConnected = true;
-        await JoinQueue();
-    }
-
-    private async Task JoinQueue()
-    {
-        if (hubConnection is not null)
-        {
-            await hubConnection.SendAsync("JoinQueue");
         }
     }
 
-    private async Task OnCellClick(int index)
+    private void OnCellClick(int index)
     {
-        if (hubConnection is not null && isMyTurn && board[index] == null && winner == null)
+        if (isMyTurn && board[index] == null && winner == null)
         {
-            // Optimistic update? No, let's wait for server to be safe and consistent
-            await hubConnection.SendAsync("MakeMove", index);
+            GameService.MakeMove(playerId, index);
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (hubConnection is not null)
-        {
-            await hubConnection.DisposeAsync();
-        }
+        GameService.OnWaiting -= HandleWaiting;
+        GameService.OnGameStarted -= HandleGameStarted;
+        GameService.OnGameUpdated -= HandleGameUpdated;
+        GameService.OnOpponentLeft -= HandleOpponentLeft;
+        
+        GameService.RemovePlayer(playerId);
+        
+        return ValueTask.CompletedTask;
     }
 }
