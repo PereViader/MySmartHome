@@ -1,12 +1,12 @@
 ﻿version: '3.8'
 
 services:
-  mysmarthome:
+  mysmarthome.automations:
     
-    build: .
+    build: MySmartHome.Automations
 
-    image: pereviader/mysmarthome:latest
-    container_name: mysmarthome
+    image: pereviader/mysmarthome.automations:latest
+    container_name: mysmarthome.automations
     pull_policy: always
     restart: unless-stopped
     network_mode: "host"
@@ -15,3 +15,21 @@ services:
     volumes:
       - ${APP_AUDIO_PATH}/:/app/audio:ro
       - ${APP_CONFIG_PATH}:/app/appsettings.Configuration.json:ro
+
+    environment:
+      - ASPNETCORE_HTTP_PORTS=15002
+  
+  mysmarthome.web:
+  
+    build: MySmartHome.Web
+
+    image: pereviader/mysmarthome.web:latest
+    container_name: mysmarthome.web
+    pull_policy: always
+    restart: unless-stopped
+
+    ports:
+      - "15001:15001"
+
+    environment:
+      - ASPNETCORE_HTTP_PORTS=15001
