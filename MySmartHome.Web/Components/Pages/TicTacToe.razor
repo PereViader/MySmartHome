@@ -1,43 +1,74 @@
 @page "/games/tictactoe"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
 
 <PageTitle>Tic-Tac-Toe</PageTitle>
 
 <div class="tictactoe-container">
     <h1>Tic-Tac-Toe</h1>
     
-    <div class="status-bar">
-        @if (winner != null)
-        {
-            <div class="alert alert-success">
-                @if (winner == "Draw")
-                {
-                    <span>It's a Draw!</span>
-                }
-                else
-                {
-                    <span>Winner: @winner!</span>
-                }
-                <button class="btn btn-primary ms-3" @onclick="ResetGame">Play Again</button>
-            </div>
-        }
-        else
-        {
-            <div class="alert alert-info">
-                Turn: @(isPlayerTurn ? "Player (X)" : "Computer (O)")
-            </div>
-        }
-    </div>
+    @if (!isConnected)
+    {
+        <div class="alert alert-warning">Connecting to server...</div>
+    }
+    else if (isWaiting)
+    {
+        <div class="alert alert-info">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            Waiting for another player...
+        </div>
+    }
+    else if (opponentLeft)
+    {
+        <div class="alert alert-danger">
+            Opponent disconnected.
+            <button class="btn btn-primary ms-3" @onclick="JoinQueue">Find New Game</button>
+        </div>
+    }
+    else
+    {
+        <div class="status-bar">
+            @if (winner != null)
+            {
+                <div class="alert alert-success">
+                    @if (winner == "Draw")
+                    {
+                        <span>It's a Draw!</span>
+                    }
+                    else
+                    {
+                        <span>Winner: @(winner == mySymbol ? "You" : "Opponent") (@winner)!</span>
+                    }
+                    <button class="btn btn-primary ms-3" @onclick="JoinQueue">Play Again</button>
+                </div>
+            }
+            else
+            {
+                <div class="alert @(isMyTurn ? "alert-success" : "alert-secondary")">
+                    @if (isMyTurn)
+                    {
+                        <span>Your Turn (@mySymbol)</span>
+                    }
+                    else
+                    {
+                        <span>Opponent's Turn (@(mySymbol == "X" ? "O" : "X"))</span>
+                    }
+                </div>
+            }
+        </div>
 
-    <div class="board">
-        @for (int i = 0; i < 9; i++)
-        {
-            int localI = i;
-            <div class="cell @(board[i] != null ? "taken" : "")" @onclick="() => OnCellClick(localI)">
-                @board[i]
-            </div>
-        }
-    </div>
+        <div class="board">
+            @for (int i = 0; i < 9; i++)
+            {
+                int localI = i;
+                <div class="cell @(board[i] != null ? "taken" : "")" @onclick="() => OnCellClick(localI)">
+                    @board[i]
+                </div>
+            }
+        </div>
+    }
 </div>
 
 <style>
@@ -82,92 +113,93 @@
     .status-bar {
         margin-bottom: 1rem;
         font-size: 1.2rem;
+        text-align: center;
     }
 </style>
 
 @code {
+    private HubConnection? hubConnection;
     private string?[] board = new string?[9];
-    private bool isPlayerTurn = true;
+    private bool isConnected = false;
+    private bool isWaiting = true;
+    private bool opponentLeft = false;
+    private string? mySymbol;
+    private bool isMyTurn = false;
     private string? winner = null;
-    private Random random = new Random();
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/gamehub"))
+            .Build();
+
+        hubConnection.On("WaitingForOpponent", () =>
+        {
+            isWaiting = true;
+            opponentLeft = false;
+            winner = null;
+            board = new string?[9];
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<string, bool>("GameStarted", (symbol, isTurn) =>
+        {
+            isWaiting = false;
+            opponentLeft = false;
+            mySymbol = symbol;
+            isMyTurn = isTurn;
+            winner = null;
+            board = new string?[9];
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<string?[], bool, string?, bool>("UpdateGame", (newBoard, isTurn, winSymbol, isDraw) =>
+        {
+            board = newBoard;
+            isMyTurn = isTurn;
+            if (winSymbol != null) winner = winSymbol;
+            else if (isDraw) winner = "Draw";
+            
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On("OpponentLeft", () =>
+        {
+            if (winner == null)
+            {
+                opponentLeft = true;
+                isWaiting = false; // Stop showing waiting spinner, show disconnect msg
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        await hubConnection.StartAsync();
+        isConnected = true;
+        await JoinQueue();
+    }
+
+    private async Task JoinQueue()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("JoinQueue");
+        }
+    }
 
     private async Task OnCellClick(int index)
     {
-        if (board[index] != null || winner != null || !isPlayerTurn)
+        if (hubConnection is not null && isMyTurn && board[index] == null && winner == null)
         {
-            return;
-        }
-
-        // Player Move
-        board[index] = "X";
-        if (CheckWin("X"))
-        {
-            winner = "Player";
-        }
-        else if (IsBoardFull())
-        {
-            winner = "Draw";
-        }
-        else
-        {
-            isPlayerTurn = false;
-            // Small delay for "thinking"
-            await Task.Delay(500);
-            await ComputerMove();
+            // Optimistic update? No, let's wait for server to be safe and consistent
+            await hubConnection.SendAsync("MakeMove", index);
         }
     }
 
-    private async Task ComputerMove()
+    public async ValueTask DisposeAsync()
     {
-        if (winner != null) return;
-
-        var availableMoves = board.Select((val, idx) => new { val, idx })
-                                  .Where(x => x.val == null)
-                                  .Select(x => x.idx)
-                                  .ToList();
-
-        if (availableMoves.Count > 0)
+        if (hubConnection is not null)
         {
-            // Simple AI: Random move
-            // Improvement: Block or Win if possible could be added here
-            int move = availableMoves[random.Next(availableMoves.Count)];
-            board[move] = "O";
-
-            if (CheckWin("O"))
-            {
-                winner = "Computer";
-            }
-            else if (IsBoardFull())
-            {
-                winner = "Draw";
-            }
+            await hubConnection.DisposeAsync();
         }
-        
-        isPlayerTurn = true;
-    }
-
-    private bool CheckWin(string player)
-    {
-        // Winning combinations
-        int[][] combinations = new int[][]
-        {
-            new[] {0, 1, 2}, new[] {3, 4, 5}, new[] {6, 7, 8}, // Rows
-            new[] {0, 3, 6}, new[] {1, 4, 7}, new[] {2, 5, 8}, // Cols
-            new[] {0, 4, 8}, new[] {2, 4, 6}                    // Diagonals
-        };
-
-        return combinations.Any(c => board[c[0]] == player && board[c[1]] == player && board[c[2]] == player);
-    }
-
-    private bool IsBoardFull()
-    {
-        return board.All(x => x != null);
-    }
-
-    private void ResetGame()
-    {
-        board = new string?[9];
-        isPlayerTurn = true;
-        winner = null;
     }
 }

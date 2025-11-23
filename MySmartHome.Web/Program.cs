@@ -6,6 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<MySmartHome.Web.Services.GameService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -23,5 +26,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapHub<MySmartHome.Web.Hubs.GameHub>("/gamehub");
 
 app.Run();
