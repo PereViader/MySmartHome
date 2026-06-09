@@ -1,11 +1,8 @@
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Options;
 using MySmartHome;
 using MySmartHome.Authentication;
 using MySmartHome.Event;
 using MySmartHome.Music;
 using MySmartHome.Telegram;
-using MySmartHome.WaterReminders;
 using TickerQ.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,8 +27,7 @@ builder.Services
     .Configure<MusicServiceOptions>(builder.Configuration.GetSection(nameof(MusicServiceOptions)))
     .Configure<ApiKeyEndpointFilterOptions>(builder.Configuration.GetSection(nameof(ApiKeyEndpointFilterOptions)))
     .Configure<HomeTelegramServiceOptions>(builder.Configuration.GetSection(nameof(HomeTelegramServiceOptions)))
-    .Configure<WaterTelegramServiceOptions>(builder.Configuration.GetSection(nameof(WaterTelegramServiceOptions)))
-    .Configure<WaterReminderJobOptions>(builder.Configuration.GetSection(nameof(WaterReminderJobOptions)));
+    .Configure<WaterTelegramServiceOptions>(builder.Configuration.GetSection(nameof(WaterTelegramServiceOptions)));
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
